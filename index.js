@@ -1,6 +1,6 @@
 // === Constants ===
 const BASE = "https://fsa-crud-2aa9294fe819.herokuapp.com/api";
-const COHORT = ""; // Make sure to change this!
+const COHORT = "/2510-CPU-RM-WEB-PT"; // Make sure to change this!
 const API = BASE + COHORT;
 
 // === State ===
@@ -57,9 +57,90 @@ async function getGuests() {
   }
 }
 
+/** Creates a new party via POST request to the API */
+async function createParty(event) {
+  event.preventDefault();
+  
+  try {
+    const form = event.target;
+    const name = form.name.value;
+    const description = form.description.value;
+    const date = form.date.value;
+    const location = form.location.value;
+    
+    const isoDate = new Date(date).toISOString();
+    
+    const response = await fetch(API + "/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name: name,
+        description: description,
+        date: isoDate,
+        location: location
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      form.reset();
+      await getParties();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function deleteParty(id) {
+  try {
+    const response = await fetch(API + "/events/" + id, {
+      method: "DELETE"
+    });
+    
+    if (response.ok) {
+      selectedParty = null;
+      await getParties();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 // === Components ===
 
-/** Party name that shows more details about the party when clicked */
+function AddPartyForm() {
+  const $form = document.createElement("form");
+  $form.classList.add("add-party-form");
+  
+  $form.innerHTML = `
+    <h3>Add a new party</h3>
+    <label>
+      Name
+      <input type="text" name="name" required />
+    </label>
+    <label>
+      Description
+      <input type="text" name="description" required />
+    </label>
+    <label>
+      Date
+      <input type="date" name="date" required />
+    </label>
+    <label>
+      Location
+      <input type="text" name="location" required />
+    </label>
+    <button type="submit">Add party</button>
+  `;
+  
+  $form.addEventListener("submit", createParty);
+  
+  return $form;
+}
+
 function PartyListItem(party) {
   const $li = document.createElement("li");
 
@@ -86,6 +167,7 @@ function PartyList() {
 }
 
 /** Detailed information about the selected party */
+/** Detailed information about the selected party */
 function SelectedParty() {
   if (!selectedParty) {
     const $p = document.createElement("p");
@@ -101,14 +183,18 @@ function SelectedParty() {
     </time>
     <address>${selectedParty.location}</address>
     <p>${selectedParty.description}</p>
+    <button class="delete-btn">Delete Party</button>
     <GuestList></GuestList>
   `;
+
+  const deleteBtn = $party.querySelector(".delete-btn");
+  deleteBtn.addEventListener("click", () => deleteParty(selectedParty.id));
+  
   $party.querySelector("GuestList").replaceWith(GuestList());
 
   return $party;
 }
 
-/** List of guests attending the selected party */
 function GuestList() {
   const $ul = document.createElement("ul");
   const guestsAtParty = guests.filter((guest) =>
@@ -135,6 +221,9 @@ function render() {
     <h1>Party Planner</h1>
     <main>
       <section>
+        <AddPartyForm></AddPartyForm>
+      </section>
+      <section>
         <h2>Upcoming Parties</h2>
         <PartyList></PartyList>
       </section>
@@ -145,6 +234,7 @@ function render() {
     </main>
   `;
 
+  $app.querySelector("AddPartyForm").replaceWith(AddPartyForm());
   $app.querySelector("PartyList").replaceWith(PartyList());
   $app.querySelector("SelectedParty").replaceWith(SelectedParty());
 }
